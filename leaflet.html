@@ -1,0 +1,168 @@
+<!DOCTYPE html>
+<html>
+<head>
+	<title>Geographical Data Visualization</title>
+
+	<link rel="stylesheet" href="https://unpkg.com/leaflet@1.0.3/dist/leaflet.css" integrity="sha512-07I2e+7D8p6he1SIM+1twR5TIrhUQn9+I6yjqD53JQjFiMf8EtC93ty0/5vJTZGF8aAocvHYNEDJajGdNx1IsQ==" crossorigin="" />
+	<script src="https://unpkg.com/leaflet@1.0.3/dist/leaflet-src.js" integrity="sha512-WXoSHqw/t26DszhdMhOXOkI7qCiv5QWXhH9R7CgvgZMHz1ImlkVQ3uNsiQKu5wwbbxtPzFXd1hK4tzno2VqhpA==" crossorigin=""></script>
+	<style>html, body {width: 100%;height: 100%;margin: 0;padding: 0;}</style>
+    <style>#map {position:absolute;top:0;bottom:0;right:0;left:0;}</style>
+	<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no"/>
+
+	<style>
+                #map {
+                    position: relative;
+                    width: 100.0%;
+                    height: 100.0%;
+                    left: 0.0%;
+                    top: 0.0%;
+                }
+
+                .leaflet-heatmap-layer {
+                	opacity: .55;
+                }
+     </style>
+	<link rel="stylesheet" href="Leaflet.markercluster/dist/MarkerCluster.css" />
+	<link rel="stylesheet" href="Leaflet.markercluster/dist/MarkerCluster.Default.css" />
+	<script src="https://unpkg.com/leaflet.markercluster@1.4.1/dist/leaflet.markercluster-src.js"></script>
+	<script src="leaflet-maskcanvas/src/QuadTree.js"></script>
+	<script src="leaflet-maskcanvas/src/L.GridLayer.MaskCanvas.js"></script>
+	<script src="Leaflet.heat/dist/leaflet-heat.js"></script>
+	<script type="text/javascript" src="GeoObs.js"></script>
+	<script type="text/javascript" src="latlon.js"></script>
+	<script type="text/javascript" src="heat.js"></script>
+
+
+</head>
+<body>
+
+	<div id="map"></div>
+	<span>Mouse over a cluster to see the bounds of its children and click a cluster to zoom to those bounds</span>
+	<script type="text/javascript">
+		var baselayer = L.layerGroup();
+
+		var tiles = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+				maxZoom: 18,
+				attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+			}),
+			latlng = L.latLng(23.87528, 90.39778);
+
+		var CartoDB_DarkMatter = L.tileLayer('https://{s}.basemaps.cartocdn.com/dark_all/{z}/{x}/{y}{r}.png', {
+				attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors &copy; <a href="https://carto.com/attributions">CARTO</a>',
+				subdomains: 'abcd',
+				maxZoom: 19
+			}), latlng = L.latLng(23.87528, 90.39778);
+		var Stamen_TonerLines = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/toner-lines/{z}/{x}/{y}{r}.{ext}', {
+				attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+				subdomains: 'abcd',
+				minZoom: 0,
+				maxZoom: 20,
+				ext: 'png'
+			}),latlng = L.latLng(23.87528, 90.39778);
+
+		var Stamen_Terrain = L.tileLayer('https://stamen-tiles-{s}.a.ssl.fastly.net/terrain/{z}/{x}/{y}{r}.{ext}', {
+			attribution: 'Map tiles by <a href="http://stamen.com">Stamen Design</a>, <a href="http://creativecommons.org/licenses/by/3.0">CC BY 3.0</a> &mdash; Map data &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+			subdomains: 'abcd',
+			minZoom: 0,
+			maxZoom: 18,
+			ext: 'png'
+		});
+		var Esri_WorldStreetMap = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Street_Map/MapServer/tile/{z}/{y}/{x}', {
+			attribution: 'Tiles &copy; Esri &mdash; Source: Esri, DeLorme, NAVTEQ, USGS, Intermap, iPC, NRCAN, Esri Japan, METI, Esri China (Hong Kong), Esri (Thailand), TomTom, 2012'
+		});
+
+		var Esri_WorldImagery = L.tileLayer('https://server.arcgisonline.com/ArcGIS/rest/services/World_Imagery/MapServer/tile/{z}/{y}/{x}', {
+			attribution: 'Tiles &copy; Esri &mdash; Source: Esri, i-cubed, USDA, USGS, AEX, GeoEye, Getmapping, Aerogrid, IGN, IGP, UPR-EGP, and the GIS User Community'
+		});
+		var OpenStreetMap_Mapnik = L.tileLayer('https://{s}.tile.openstreetmap.org/{z}/{x}/{y}.png', {
+			maxZoom: 19,
+			attribution: '&copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors'
+		});
+
+		var Thunderforest_TransportDark = L.tileLayer('https://{s}.tile.thunderforest.com/transport-dark/{z}/{x}/{y}.png?apikey={apikey}', {
+			attribution: '&copy; <a href="http://www.thunderforest.com/">Thunderforest</a>, &copy; <a href="https://www.openstreetmap.org/copyright">OpenStreetMap</a> contributors',
+			apikey: '597e050f898d4a028039b4538ba78bea',
+			maxZoom: 22
+		});
+
+        var onemap = L.tileLayer('https://maps-{s}.onemap.sg/v3/Night/{z}/{x}/{y}.png', {
+          detectRetina: true,
+          maxZoom: 18,
+          minZoom: 11,
+          //Do not remove this attribution
+          attribution: '<img src="https://docs.onemap.sg/maps/images/oneMap64-01.png" style="height:20px;width:20px;"/> New OneMap | Map data &copy; contributors, <a href="http://SLA.gov.sg">Singapore Land Authority</a>'
+        });
+
+
+		var canvas = L.canvas();
+		var map = L.map('map', {center: latlng, zoom: 7, layers: [OpenStreetMap_Mapnik, baselayer], preferCanvas: true});
+		<!--L.control.scale().addTo(map);-->
+
+
+
+
+
+		var geojson = L.geoJson(geojsonSample, {
+
+			style: function (feature) {
+				return {color: feature.properties.color};
+			},
+
+			onEachFeature: function (feature, layer) {
+				var popupText = 'Cell name: ' + feature.properties.cellname+ '<br>' +
+								'Lat: ' + feature.properties.lat +'<br>' +
+								'District: ' + feature.properties.district;
+
+
+
+				layer.bindPopup(popupText);
+			}
+		});
+
+
+		var geojsonMarkerOptions = {
+			radius: .5,
+
+
+			fillColor: function(feature){return feature.properties.color},
+			color: "#000",
+			weight: 1,
+			opacity: 1,
+			fillOpacity: 0.8
+		};
+
+
+
+		function getColor(d) {
+		  switch (d) {
+			case '2G':
+			  return '#FF0E15'; <!--FF122D 3AFF6C-->
+			case '3G':
+			  return '#32DFFF';
+			case '4G':
+			  return '#923DFF';
+		  }
+		}
+
+
+		var canvaslayer= L.geoJSON(geojsonSample, {
+			pointToLayer: function (feature, latlng) {
+				return L.circleMarker(latlng, {radius:.5, stroke:true, fillColor: getColor(feature.properties.sitetype),color: getColor(feature.properties.sitetype), weight: 1,opacity: .25,fillOpacity: 0.8, renderer: canvas });
+			}
+		});
+
+
+		
+		var markers = L.markerClusterGroup();
+		
+		
+		map.addLayer(markers);
+
+		heat = heat.map(function (p) { return [p[0], p[1]]; });
+		var geoheatlayer = L.heatLayer(heat, {minOpacity :  .01,radius: 25, max: .25})
+
+
+		L.control.layers({'Light':baselayer,'Night':onemap, 'Dark': CartoDB_DarkMatter, 'TRDark': Thunderforest_TransportDark, 'Natural': Esri_WorldImagery}, {'Canvas':canvaslayer, 'Heatmap': geoheatlayer}).addTo(map);
+	</script>
+</body>
+</html>
